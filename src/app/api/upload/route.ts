@@ -49,12 +49,30 @@ export async function POST(req: Request) {
       const buffer = Buffer.from(bytes);
       const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
 
-      // Upload to Cloudinary
-      const uploadResponse = await cloudinary.uploader.upload(base64String, {
+      // Build public ID with file extension
+      const publicIdWithoutExt = `${randomUUID()}-${file.name.replace(/\.[^/.]+$/, "")}`;
+
+      // Upload to Cloudinary with proper resource type handling
+      const uploadOptions: any = {
         folder: type === 'quotation' ? "quotations" : "documents",
-        resource_type: "raw",
-        public_id: `${randomUUID()}-${file.name.replace(/\.[^/.]+$/, "")}`
-      });
+        public_id: fileExtension ? `${publicIdWithoutExt}${fileExtension}` : publicIdWithoutExt,
+      };
+
+      // For PDF files, use raw resource type with correct content type
+      if (fileExtension === '.pdf') {
+        uploadOptions.resource_type = "raw";
+        uploadOptions.content_type = "application/pdf";
+      } else if (fileExtension === '.xls' || fileExtension === '.xlsx') {
+        uploadOptions.resource_type = "raw";
+        uploadOptions.content_type = fileExtension === '.xls'
+          ? 'application/vnd.ms-excel'
+          : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      } else {
+        uploadOptions.resource_type = "raw";
+        uploadOptions.content_type = file.type;
+      }
+
+      const uploadResponse = await cloudinary.uploader.upload(base64String, uploadOptions);
 
       return NextResponse.json({
         success: true,
@@ -73,7 +91,7 @@ export async function POST(req: Request) {
 
       // Upload to Cloudinary
       const uploadResponse = await cloudinary.uploader.upload(image, {
-        folder: "user_uploads",
+        folder: "attendances",
       });
 
       return NextResponse.json({

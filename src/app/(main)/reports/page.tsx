@@ -118,9 +118,33 @@ export default function CompleteReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("sales");
+  const [currentUser, setCurrentUser] = useState<{
+    role: string;
+    id: string;
+    email: string;
+    name: string;
+  } | null>(null);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('/api/profile');
+      if (response.ok) {
+        const userData = await response.json();
+        setCurrentUser({
+          role: userData.profile.role,
+          id: userData.profile.id,
+          email: userData.profile.email,
+          name: userData.profile.name,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching current user:', err);
+    }
+  };
 
   useEffect(() => {
     generateReports();
+    fetchCurrentUser();
   }, [selectedPeriod]);
 
   const formatCurrency = (amount: number) => {
@@ -211,12 +235,16 @@ export default function CompleteReportsPage() {
             <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
           </Button>
 
-          <Button onClick={() => exportReport('excel')} variant="outline" size="icon">
-            <Download className="h-4 w-4" />
-          </Button>
-          <Button onClick={() => exportReport('pdf')} variant="outline" size="icon">
-            <FileText className="h-4 w-4" />
-          </Button>
+          {(currentUser?.role === 'admin' || currentUser?.role === 'SuperAdmin') && (
+            <>
+              <Button onClick={() => exportReport('excel')} variant="outline" size="icon">
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button onClick={() => exportReport('pdf')} variant="outline" size="icon">
+                <FileText className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

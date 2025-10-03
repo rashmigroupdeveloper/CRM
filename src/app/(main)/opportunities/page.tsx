@@ -798,15 +798,21 @@ export default function OpportunitiesPage() {
         formData.append('file', proposalForm.quotationFile);
         formData.append('type', 'quotation');
 
-        const uploadResponse = await fetch('/api/uploads', {
+        const uploadResponse = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
         });
-        
+
         if (uploadResponse.ok) {
           const uploadData = await uploadResponse.json();
           console.log("File upload response:", uploadData);
-          quotationDocumentUrl = uploadData.url;
+          if (uploadData.success && uploadData.url) {
+            quotationDocumentUrl = uploadData.url;
+          } else {
+            console.warn("File upload failed: invalid response format");
+            toast.error("File upload failed. Please try again.");
+            return;
+          }
         } else {
           console.warn("File upload failed, proceeding without document");
           toast.error("File upload failed. Please try again.");

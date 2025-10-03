@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
-import { getCache, setCache, CACHE_KEYS, invalidateAdminNotificationCache } from "@/lib/redis";
 
 // Dynamic import for web-push to avoid build issues
 let webpush: typeof import('web-push') | null = null;
@@ -66,20 +65,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Try to get from cache first
-    const cacheKey = CACHE_KEYS.adminNotifications(limit, offset);
-    const cachedData = await getCache<{
-      notifications: any[];
-      totalCount: number;
-      unreadCount: number;
-      hasMore: boolean;
-    }>(cacheKey);
-
-    if (cachedData) {
-      return NextResponse.json(cachedData);
-    }
-
-    // Optimized query: get all notifications with only needed fields
+    // Direct database query without caching
     const notifications = await prisma.notifications.findMany({
       orderBy: {
         createdAt: 'desc'
@@ -113,7 +99,7 @@ export async function GET(request: Request) {
     });
 
     // Transform notifications to include recipient info
-    const transformedNotifications = notifications.map(notification => ({
+    const transformedNotifications = notifications.map((notification: any) => ({
       id: notification.id,
       title: notification.title,
       message: notification.message,
@@ -132,7 +118,7 @@ export async function GET(request: Request) {
       } : undefined
     }));
 
-    // Optimized: use aggregation to get both counts in one query
+    // Get counts using optimized aggregate queries
     const [totalCountResult, unreadCountResult] = await Promise.all([
       prisma.notifications.aggregate({
         _count: { id: true }
@@ -152,9 +138,6 @@ export async function GET(request: Request) {
       unreadCount,
       hasMore: offset + limit < totalCount
     };
-
-    // Cache the response
-    await setCache(cacheKey, responseData);
 
     return NextResponse.json(responseData);
 

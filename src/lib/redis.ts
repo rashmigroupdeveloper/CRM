@@ -1,11 +1,16 @@
-import { createClient, RedisClientType } from 'redis';
+/**
+ * Redis stub for serverless compatibility
+ * This file imports are disabled to ensure serverless deployment works
+ * All Redis functionality has been removed for Vercel/serverless compatibility
+ */
 
-let redisClient: RedisClientType | null = null;
+// Disabled Redis imports to prevent build failures in serverless environments
+// import { createClient, RedisClientType } from 'redis';
 
-// Redis cache TTL in seconds (5 minutes)
+// Cache TTL placeholder (no longer used)
 const CACHE_TTL = 300;
 
-// Notification cache keys
+// Notification cache keys (kept for interface compatibility)
 export const CACHE_KEYS = {
   userNotifications: (userId: number, limit: number, offset: number) =>
     `notifications:user:${userId}:limit:${limit}:offset:${offset}`,
@@ -16,114 +21,40 @@ export const CACHE_KEYS = {
   notificationById: (id: number) => `notification:id:${id}`
 };
 
-export async function getRedisClient(): Promise<RedisClientType> {
-  if (!redisClient) {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-
-    redisClient = createClient({
-      url: redisUrl,
-      socket: {
-        connectTimeout: 60000,
-      },
-    });
-
-    redisClient.on('error', (err) => {
-      console.warn('Redis Client Error:', err.message);
-      // Don't throw error, just log it to allow app to continue without Redis
-    });
-
-    redisClient.on('connect', () => {
-      console.log('Connected to Redis');
-    });
-
-    try {
-      await redisClient.connect();
-    } catch (error) {
-      console.warn('Failed to connect to Redis:', error);
-      redisClient = null;
-    }
-  }
-
-  return redisClient!;
-}
-
-export async function setCache(key: string, value: any, ttl: number = CACHE_TTL): Promise<void> {
-  try {
-    if (!redisClient) return;
-
-    const serializedValue = JSON.stringify(value);
-    await redisClient.setEx(key, ttl, serializedValue);
-  } catch (error) {
-    console.warn('Redis set error:', error);
-  }
-}
-
-export async function getCache<T>(key: string): Promise<T | null> {
-  try {
-    if (!redisClient) return null;
-
-    const cached = await redisClient.get(key);
-    if (cached) {
-      return JSON.parse(cached) as T;
-    }
-  } catch (error) {
-    console.warn('Redis get error:', error);
-  }
+// Stub functions that do nothing (for serverless compatibility)
+export async function getRedisClient(): Promise<any> {
   return null;
 }
 
+export async function setCache(key: string, value: any, ttl: number = CACHE_TTL): Promise<void> {
+  // No-op for serverless
+  return Promise.resolve();
+}
+
+export async function getCache<T>(key: string): Promise<T | null> {
+  // Always return null for serverless (no caching)
+  return Promise.resolve(null);
+}
+
 export async function deleteCache(key: string): Promise<void> {
-  try {
-    if (!redisClient) return;
-    await redisClient.del(key);
-  } catch (error) {
-    console.warn('Redis delete error:', error);
-  }
+  // No-op for serverless
+  return Promise.resolve();
 }
 
 export async function deleteCachePattern(pattern: string): Promise<void> {
-  try {
-    if (!redisClient) return;
-
-    const keys = await redisClient.keys(pattern);
-    if (keys.length > 0) {
-      await redisClient.del(keys);
-    }
-  } catch (error) {
-    console.warn('Redis delete pattern error:', error);
-  }
+  // No-op for serverless
+  return Promise.resolve();
 }
 
-// Notification-specific cache functions
+// Notification-specific cache functions (no-op for serverless)
 export async function invalidateUserNotificationCache(userId: number): Promise<void> {
-  try {
-    await deleteCachePattern(`notifications:user:${userId}:*`);
-  } catch (error) {
-    console.warn('Error invalidating user notification cache:', error);
-  }
+  return Promise.resolve();
 }
 
 export async function invalidateAdminNotificationCache(): Promise<void> {
-  try {
-    await deleteCachePattern('notifications:admin:*');
-  } catch (error) {
-    console.warn('Error invalidating admin notification cache:', error);
-  }
+  return Promise.resolve();
 }
 
 export async function invalidateNotificationCache(notificationId?: number): Promise<void> {
-  try {
-    if (notificationId) {
-      await deleteCache(CACHE_KEYS.notificationById(notificationId));
-    }
-    // Invalidate all user and admin caches when a notification is modified
-    await deleteCachePattern('notifications:*');
-  } catch (error) {
-    console.warn('Error invalidating notification cache:', error);
-  }
-}
-
-// Initialize Redis connection on module load
-if (typeof window === 'undefined') { // Only on server side
-  getRedisClient().catch(console.warn);
+  return Promise.resolve();
 }

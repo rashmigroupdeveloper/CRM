@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
-import { invalidateAdminNotificationCache } from "@/lib/redis";
 
 // Helper function to get user from token
 async function getUserFromToken(request: Request) {
@@ -42,9 +41,6 @@ export async function DELETE(request: Request) {
 
     // Delete all notifications
     const result = await prisma.notifications.deleteMany({});
-
-    // Invalidate admin notification cache
-    await invalidateAdminNotificationCache();
 
     return NextResponse.json({
       success: true,

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
-import { invalidateUserNotificationCache } from "@/lib/redis";
 
 // Helper function to get user from token
 async function getUserFromToken(request: NextRequest) {
@@ -59,9 +58,6 @@ export async function PUT(
     if (updatedNotification.count === 0) {
       return NextResponse.json({ error: "Notification not found or unauthorized" }, { status: 404 });
     }
-
-    // Invalidate user notification cache
-    await invalidateUserNotificationCache(user.id);
 
     return NextResponse.json({
       success: true,

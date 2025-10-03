@@ -131,6 +131,12 @@ export default function DashboardPage() {
   const [exportFormat, setExportFormat] = useState('excel');
   const [isExporting, setIsExporting] = useState(false);
   const { sendNotification } = useNotifications();
+  const [currentUser, setCurrentUser] = useState<{
+    role: string;
+    id: string;
+    email: string;
+    name: string;
+  } | null>(null);
   const [recentActivities, setRecentActivities] = useState<RecentActivityItem[]>([]);
   const [overdueQueue, setOverdueQueue] = useState<OverdueFollowUpItem[]>([]);
   const [activeOverdue, setActiveOverdue] = useState<OverdueFollowUpItem | null>(null);
@@ -144,6 +150,23 @@ export default function DashboardPage() {
   const opportunityToPipelineRate = metrics?.conversionRates?.opportunityToPipeline ?? 0;
   const funnelDropOff = Math.max(leadToOpportunityRate - opportunityToPipelineRate, 0);
 
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('/api/profile');
+      if (response.ok) {
+        const userData = await response.json();
+        setCurrentUser({
+          role: userData.profile.role,
+          id: userData.profile.id,
+          email: userData.profile.email,
+          name: userData.profile.name,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching current user:', err);
+    }
+  };
+
   useEffect(() => {
     // Trigger animations after component mounts
     setTimeout(() => setAnimateCharts(true), 100);
@@ -152,6 +175,7 @@ export default function DashboardPage() {
     fetchDashboardData();
     fetchRecentActivities();
     fetchOverdueFollowups();
+    fetchCurrentUser();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -607,17 +631,18 @@ export default function DashboardPage() {
                     Advanced Analytics
                   </Link>
                 </Button>
-                <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-105"
-                      aria-label="Export dashboard data"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Export Data
-                    </Button>
-                  </DialogTrigger>
+                {(currentUser?.role === 'admin' || currentUser?.role === 'SuperAdmin') && (
+                  <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-300 hover:scale-105"
+                        aria-label="Export dashboard data"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Data
+                      </Button>
+                    </DialogTrigger>
                   <DialogContent className="sm:max-w-md bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 border-0 shadow-2xl">
                     <DialogHeader>
                       <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
@@ -765,6 +790,7 @@ export default function DashboardPage() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                )}
               </nav>
             </div>
           </header>

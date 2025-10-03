@@ -1,45 +1,13 @@
-// Conditional SQLite database for uploads - only available in development
-let db: any = null;
+/**
+ * SQLite stub for serverless compatibility
+ * SQLite is not compatible with Vercel serverless environments
+ * All file uploads now use Cloudinary instead
+ */
 
-// Only initialize SQLite in development environment
-if (process.env.NODE_ENV === 'development' || process.env.USE_SQLITE === 'true') {
-  try {
-    // Dynamic import to avoid build issues in production
-    const { default: Database } = await import("better-sqlite3");
-    const { join } = await import("path");
+// Disable SQLite for serverless compatibility
+const db = null;
 
-    // Database file stored locally in project root
-    db = new Database(join(process.cwd(), "uploads.db"));
-
-    // Create table if not exists
-    db.prepare(`
-      CREATE TABLE IF NOT EXISTS documents (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        path TEXT NOT NULL,
-        url TEXT,
-        uploadedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
-
-    // Add url column to existing table if it doesn't exist
-    try {
-      db.prepare(`
-        ALTER TABLE documents ADD COLUMN url TEXT
-      `).run();
-    } catch (error) {
-      // Column already exists or other error, ignore
-      console.log('URL column already exists or cannot be added:', (error as Error).message);
-    }
-
-    console.log('SQLite database initialized for file uploads');
-  } catch (error) {
-    console.warn('SQLite not available, file uploads will use file system only:', (error as Error).message);
-    db = null;
-  }
-} else {
-  console.log('SQLite disabled in production environment');
-}
+console.log('SQLite disabled for serverless compatibility - using Cloudinary for file uploads');
 
 // Mock database interface for production
 const mockDb = {

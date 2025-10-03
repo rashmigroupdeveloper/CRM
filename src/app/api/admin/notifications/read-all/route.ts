@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
-import { invalidateAdminNotificationCache } from "@/lib/redis";
 
 // Helper function to get user from token
 async function getUserFromToken(request: Request) {
@@ -48,9 +47,6 @@ export async function PUT(request: Request) {
         updatedAt: new Date()
       }
     });
-
-    // Invalidate admin notification cache
-    await invalidateAdminNotificationCache();
 
     return NextResponse.json({
       success: true,

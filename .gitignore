@@ -43,3 +43,5 @@ next-env.d.ts
 /src/generated/prisma
 /public/uploads
 /logs
+/id_rsa
+/id_rsa.pub

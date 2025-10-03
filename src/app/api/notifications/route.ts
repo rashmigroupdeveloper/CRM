@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
-import { getCache, setCache, CACHE_KEYS, invalidateUserNotificationCache } from "@/lib/redis";
 
 // Dynamic import for web-push to avoid build issues
 let webpush: typeof import('web-push') | null = null;
@@ -61,20 +60,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Try to get from cache first
-    const cacheKey = CACHE_KEYS.userNotifications(user.id, limit, offset);
-    const cachedData = await getCache<{
-      notifications: any[];
-      totalCount: number;
-      unreadCount: number;
-      hasMore: boolean;
-    }>(cacheKey);
-
-    if (cachedData) {
-      return NextResponse.json(cachedData);
-    }
-
-    // Optimized query: get notifications with only needed fields and related sender info
+    // Direct database query without caching
     const notifications = await prisma.notifications.findMany({
       where: {
         userId: user.id,
@@ -123,7 +109,7 @@ export async function GET(request: Request) {
       }
     });
 
-    // Optimized: use aggregation to get both counts in one query
+    // Get counts using optimized aggregate queries
     const [totalCountResult, unreadCountResult] = await Promise.all([
       prisma.notifications.aggregate({
         where: { userId: user.id },
@@ -147,9 +133,6 @@ export async function GET(request: Request) {
       unreadCount,
       hasMore: offset + limit < totalCount
     };
-
-    // Cache the response
-    await setCache(cacheKey, responseData);
 
     return NextResponse.json(responseData);
 
@@ -189,7 +172,7 @@ export async function POST(request: Request) {
       const allUsers = await prisma.users.findMany({
         select: { id: true }
       });
-      recipients = allUsers.map(u => u.id);
+      recipients = allUsers.map((u: { id: number }) => u.id);
     } else {
       recipients = [user.id];
     }
@@ -241,11 +224,6 @@ export async function POST(request: Request) {
         })
       )
     );
-
-    // Invalidate caches for all recipients
-    for (const recipientId of recipients) {
-      await invalidateUserNotificationCache(recipientId);
-    }
 
     // Note: Real-time broadcasting removed - clients will poll for updates
 
