@@ -23,6 +23,8 @@ function VerifyPageContent() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,6 +61,30 @@ function VerifyPageContent() {
     }
   };
 
+  const handleResendOTP = async () => {
+    setResendLoading(true);
+    setResendMessage(null);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/signup/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to resend OTP");
+
+      setResendMessage("A new OTP has been sent to your email.");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      setError(errorMessage);
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
       <Card className="w-full max-w-sm">
@@ -88,10 +114,22 @@ function VerifyPageContent() {
             {message && (
               <p className="text-green-600 text-sm">{message}</p>
             )}
+            {resendMessage && (
+              <p className="text-blue-600 text-sm">{resendMessage}</p>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col">
             <Button className="w-full mt-10" type="submit" disabled={loading}>
               {loading ? "Verifying..." : "Verify"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full mt-2"
+              onClick={handleResendOTP}
+              disabled={resendLoading}
+            >
+              {resendLoading ? "Resending..." : "Resend OTP"}
             </Button>
             <div className="mt-4 text-center text-sm">
               Already verified?{" "}

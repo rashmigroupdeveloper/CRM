@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     });
 
     // Calculate aggregated fields from opportunities
-    companies = companies.map(company => ({
+    companies = companies.map((company) => ({
       ...company,
       totalOpportunities: company.opportunities.length,
       totalQuantity: company.opportunities.reduce((acc, opp) => acc + (opp.dealSize || 0), 0),
